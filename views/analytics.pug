@@ -1,0 +1,15 @@
+extends layout
+
+block content
+  h1 Analytics
+  table(border="1")
+    thead
+      tr
+        th Path
+        th Visits
+    tbody
+      each path in paths
+        tr
+          td= path._id
+          td= path.count
+          

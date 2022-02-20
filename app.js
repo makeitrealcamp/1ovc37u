@@ -1,8 +1,10 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const Note = require("./models/Note");
+const PageView = require("./models/PageView");
 const path = require('path');
 const md = require('marked');
+const pageView = require('./middlewares/pageView');
 
 const app = express();
 
@@ -14,12 +16,12 @@ app.set('views', 'views');
 app.use(express.urlencoded({ extended: true }));
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
 
-app.get("/", async (req, res) => {
+app.get("/", pageView, async (req, res) => {
   const notes = await Note.find();
   res.render("index",{ notes: notes } )
 });
 
-app.get("/notes/new", async (req, res) => {
+app.get("/notes/new", pageView, async (req, res) => {
   const notes = await Note.find();
   res.render("new", { notes: notes });
 });
@@ -40,13 +42,13 @@ app.post("/notes", async (req, res, next) => {
   res.redirect('/');
 });
 
-app.get("/notes/:id", async (req, res) => {
+app.get("/notes/:id", pageView, async (req, res) => {
   const notes = await Note.find();
   const note = await Note.findById(req.params.id);
   res.render("show", { notes: notes, currentNote: note, md: md });
 });
 
-app.get("/notes/:id/edit", async (req, res, next) => {
+app.get("/notes/:id/edit", pageView, async (req, res, next) => {
   const notes = await Note.find();
   const note = await Note.findById(req.params.id);
   res.render("edit", { notes: notes, currentNote: note });
@@ -72,5 +74,20 @@ app.delete("/notes/:id", async (req, res) => {
   await Note.deleteOne({ _id: req.params.id });
   res.status(204).send({});
 });
+
+app.get('/analytics', pageView, async (req, res) => {
+  const pageViews = await PageView.aggregate([
+    {
+      $group: {
+        _id: '$path',
+        count: { $sum: 1 }
+      }
+    }
+  ]);
+
+  res.render('analytics', {
+    paths: pageViews.sort((d1, d2) => d2.count - d1.count)
+  })
+})
 
 app.listen(3000, () => console.log("Listening on port 3000 ..."));
